@@ -1,8 +1,6 @@
 
-/// 6502 instruction
-pub struct Instruction {
-    pub value: u8,
-}
+mod instruction;
+pub use instruction::{InstructionType, Instruction};
 
 /// 6502 CPU emulator
 pub struct CPU {
@@ -22,15 +20,15 @@ pub struct CPU {
 
 impl CPU {
 
-    /* Create an instance of the CPU. */
+    // Create an instance of the CPU.
     pub fn new() -> CPU {
-        CPU{
+        CPU {
             a: 0,
             x: 0,
             y: 0,
             pc: 0,
             sp: 0,
-            p: 0,
+            status: 0,
         }
     }
 
@@ -42,7 +40,7 @@ impl CPU {
 
     /// Fetch memory pointed by program counter
     pub fn fetch(&mut self, ram: &mut Vec<u8>) -> Instruction {
-        let ret = Instruction{value: ram[self.pc]};
+        let ret = Instruction::new(ram[self.pc]);
         self.pc += 1;
         ret
     }
