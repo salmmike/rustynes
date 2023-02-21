@@ -1336,6 +1336,7 @@ impl Instruction {
                 };
             }
             _ => {
+                println!("Illeagal instruction? {}", value);
             }
         }
 
