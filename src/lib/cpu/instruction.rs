@@ -49,6 +49,7 @@ pub enum AddressingMode {
     Immediate,
     ZeroPage,
     ZeroPageX,
+    ZeroPageY,
     Absolute,
     AbsoluteX,
     AbsoluteY,
@@ -113,7 +114,7 @@ fn adc(value: u8) -> Instruction {
         0x71 => {
             bytes = 2;
             cycles = 5;
-            addressing_mode = AddressingMode::IndirectY;   
+            addressing_mode = AddressingMode::IndirectY;
         }
         _ => {
         }
@@ -241,12 +242,12 @@ fn bit(value: u8) -> Instruction {
         0x24 => {
             bytes = 2;
             cycles = 3;
-            addressing_mode = AddressingMode::ZeroPage;        
+            addressing_mode = AddressingMode::ZeroPage;
         }
         0x2C => {
             bytes = 3;
             cycles = 4;
-            addressing_mode = AddressingMode::Absolute;        
+            addressing_mode = AddressingMode::Absolute;
         }
         _ => {
         }
@@ -270,7 +271,7 @@ fn cmp(value: u8) -> Instruction {
         0xC9 => {
             bytes = 2;
             cycles = 2;
-            addressing_mode = AddressingMode::Immediate;        
+            addressing_mode = AddressingMode::Immediate;
         }
         0xC5 => {
             bytes = 2;
@@ -286,7 +287,7 @@ fn cmp(value: u8) -> Instruction {
             bytes = 2;
             cycles = 4;
             addressing_mode = AddressingMode::Absolute;
-            
+
         }
         0xDD => {
             bytes = 3;
@@ -406,7 +407,7 @@ fn eor(value: u8) -> Instruction {
         0x49 => {
             bytes = 2;
             cycles = 2;
-            addressing_mode = AddressingMode::Immediate;        
+            addressing_mode = AddressingMode::Immediate;
         }
         0x45 => {
             bytes = 2;
@@ -443,7 +444,7 @@ fn eor(value: u8) -> Instruction {
             cycles = 5;
             addressing_mode = AddressingMode::IndirectY
         }
-        _ => {   
+        _ => {
         }
     }
 
@@ -483,7 +484,7 @@ fn inc(value: u8) -> Instruction {
             cycles = 7;
             addressing_mode = AddressingMode::AbsoluteX;
         }
-        _ => {   
+        _ => {
         }
     }
 
@@ -511,9 +512,9 @@ fn jmp(value: u8) -> Instruction {
         0x6C => {
             bytes = 3;
             cycles = 5;
-            addressing_mode = AddressingMode::Indirect;        
+            addressing_mode = AddressingMode::Indirect;
         }
-        _ => {   
+        _ => {
         }
     }
 
@@ -571,9 +572,481 @@ fn lda(value: u8) -> Instruction {
         0xB1 => {
             bytes = 2;
             cycles = 5;
-            addressing_mode = AddressingMode::IndirectY;                                
+            addressing_mode = AddressingMode::IndirectY;
         }
-        _ => {   
+        _ => {
+        }
+    }
+
+    Instruction {
+        value: value,
+        itype: itype,
+        addressing_mode: addressing_mode,
+        cycles: cycles,
+        bytes: bytes,
+    }
+}
+
+
+fn ldx(value: u8) -> Instruction {
+    let itype = InstructionType::LDX;
+    let mut bytes = 0;
+    let mut cycles = 0;
+    let mut addressing_mode = AddressingMode::Implied;
+
+    match value {
+        0xA2 => {
+            bytes = 2;
+            cycles = 2;
+            addressing_mode = AddressingMode::Immediate;
+        }
+        0xA6 => {
+            bytes = 2;
+            cycles = 3;
+            addressing_mode = AddressingMode::ZeroPage;
+        }
+        0xB6 => {
+            bytes = 2;
+            cycles = 4;
+            addressing_mode = AddressingMode::ZeroPageY;
+        }
+        0xAE => {
+            bytes = 3;
+            cycles = 4;
+            addressing_mode = AddressingMode::Absolute;
+        }
+        0xBE => {
+            bytes = 3;
+            cycles = 4;
+            addressing_mode = AddressingMode::AbsoluteY;
+        }
+        _ => {
+        }
+    }
+
+    Instruction {
+        value: value,
+        itype: itype,
+        addressing_mode: addressing_mode,
+        cycles: cycles,
+        bytes: bytes,
+    }
+}
+
+fn ldy(value: u8) -> Instruction {
+    let itype = InstructionType::LDY;
+    let mut bytes = 0;
+    let mut cycles = 0;
+    let mut addressing_mode = AddressingMode::Implied;
+
+    match value {
+        0xA0 => {
+            bytes = 2;
+            cycles = 2;
+            addressing_mode = AddressingMode::Immediate;
+        }
+        0xA4 => {
+            bytes = 2;
+            cycles = 3;
+            addressing_mode = AddressingMode::ZeroPage;
+        }
+        0xB4 => {
+            bytes = 2;
+            cycles = 4;
+            addressing_mode = AddressingMode::ZeroPageX;
+        }
+        0xAC => {
+            bytes = 3;
+            cycles = 4;
+            addressing_mode = AddressingMode::Absolute;
+        }
+        0xBC => {
+            bytes = 3;
+            cycles = 4;
+            addressing_mode = AddressingMode::AbsoluteX;
+        }
+        _ => {
+        }
+    }
+
+    Instruction {
+        value: value,
+        itype: itype,
+        addressing_mode: addressing_mode,
+        cycles: cycles,
+        bytes: bytes,
+    }
+}
+
+fn lsr(value: u8) -> Instruction {
+    let itype = InstructionType::LSR;
+    let mut bytes = 0;
+    let mut cycles = 0;
+    let mut addressing_mode = AddressingMode::Implied;
+
+    match value {
+        0x4A => {
+            bytes = 1;
+            cycles = 2;
+            addressing_mode = AddressingMode::Accumulator;
+        }
+        0x46 => {
+            bytes = 2;
+            cycles = 5;
+            addressing_mode = AddressingMode::ZeroPage;
+        }
+        0x56 => {
+            bytes = 2;
+            cycles = 6;
+            addressing_mode = AddressingMode::ZeroPageX;
+        }
+        0x4E => {
+            bytes = 3;
+            cycles = 6;
+            addressing_mode = AddressingMode::Absolute;
+        }
+        0x5E => {
+            bytes = 3;
+            cycles = 7;
+            addressing_mode = AddressingMode::AbsoluteX;
+        }
+        _ => {
+        }
+    }
+
+    Instruction {
+        value: value,
+        itype: itype,
+        addressing_mode: addressing_mode,
+        cycles: cycles,
+        bytes: bytes,
+    }
+}
+
+fn ora(value: u8) -> Instruction {
+    let itype = InstructionType::ORA;
+    let mut bytes = 0;
+    let mut cycles = 0;
+    let mut addressing_mode = AddressingMode::Implied;
+
+    match value {
+        0x09 => {
+            bytes = 2;
+            cycles = 2;
+            addressing_mode = AddressingMode::Immediate;
+        }
+        0x05 => {
+            bytes = 2;
+            cycles = 3;
+            addressing_mode = AddressingMode::ZeroPage;
+        }
+        0x15 => {
+            bytes = 2;
+            cycles = 4;
+            addressing_mode = AddressingMode::ZeroPageX;
+        }
+        0x0D => {
+            bytes = 3;
+            cycles = 4;
+            addressing_mode = AddressingMode::Absolute;
+        }
+        0x1D => {
+            bytes = 3;
+            cycles = 4;
+            addressing_mode = AddressingMode::AbsoluteX;
+        }
+        0x19 => {
+            bytes = 3;
+            cycles = 4;
+            addressing_mode = AddressingMode::AbsoluteY;
+        }
+        0x01 => {
+            bytes = 2;
+            cycles = 6;
+            addressing_mode = AddressingMode::IndirectX;
+        }
+        0x11 => {
+            bytes = 2;
+            cycles = 5;
+            addressing_mode = AddressingMode::IndirectY;
+        }
+        _ => {
+        }
+    }
+
+    Instruction {
+        value: value,
+        itype: itype,
+        addressing_mode: addressing_mode,
+        cycles: cycles,
+        bytes: bytes,
+    }
+}
+
+fn rol(value: u8) -> Instruction {
+    let itype = InstructionType::ROL;
+    let mut bytes = 0;
+    let mut cycles = 0;
+    let mut addressing_mode = AddressingMode::Implied;
+
+    match value {
+        0x2A => {
+            bytes = 1;
+            cycles = 2;
+            addressing_mode = AddressingMode::Accumulator;
+        }
+        0x26 => {
+            bytes = 2;
+            cycles = 5;
+            addressing_mode = AddressingMode::ZeroPage;
+        }
+        0x36 => {
+            bytes = 2;
+            cycles = 6;
+            addressing_mode = AddressingMode::ZeroPageX;
+        }
+        0x2E => {
+            bytes = 3;
+            cycles = 6;
+            addressing_mode = AddressingMode::Absolute;
+        }
+        0x3E => {
+            bytes = 3;
+            cycles = 7;
+            addressing_mode = AddressingMode::AbsoluteX;
+        }
+        _ => {
+        }
+    }
+
+    Instruction {
+        value: value,
+        itype: itype,
+        addressing_mode: addressing_mode,
+        cycles: cycles,
+        bytes: bytes,
+    }
+}
+
+
+fn ror(value: u8) -> Instruction {
+    let itype = InstructionType::ROR;
+    let mut bytes = 0;
+    let mut cycles = 0;
+    let mut addressing_mode = AddressingMode::Implied;
+
+    match value {
+        0x2A => {
+            bytes = 1;
+            cycles = 2;
+            addressing_mode = AddressingMode::Accumulator;
+        }
+        0x26 => {
+            bytes = 2;
+            cycles = 5;
+            addressing_mode = AddressingMode::ZeroPage;
+        }
+        0x36 => {
+            bytes = 2;
+            cycles = 6;
+            addressing_mode = AddressingMode::ZeroPageX;
+        }
+        0x2E => {
+            bytes = 3;
+            cycles = 6;
+            addressing_mode = AddressingMode::Absolute;
+        }
+        0x3E => {
+            bytes = 3;
+            cycles = 7;
+            addressing_mode = AddressingMode::AbsoluteX;
+        }
+        _ => {
+        }
+    }
+
+    Instruction {
+        value: value,
+        itype: itype,
+        addressing_mode: addressing_mode,
+        cycles: cycles,
+        bytes: bytes,
+    }
+}
+
+fn sbc(value: u8) -> Instruction {
+    let itype = InstructionType::SBC;
+    let mut bytes = 0;
+    let mut cycles = 0;
+    let mut addressing_mode = AddressingMode::Implied;
+
+    match value {
+        0xE9 => {
+            bytes = 2;
+            cycles = 2;
+            addressing_mode = AddressingMode::Immediate;
+        }
+        0xE5 => {
+            bytes = 2;
+            cycles = 3;
+            addressing_mode = AddressingMode::ZeroPage;
+        }
+        0xF5 => {
+            bytes = 2;
+            cycles = 4;
+            addressing_mode = AddressingMode::ZeroPageX;
+        }
+        0xED => {
+            bytes = 3;
+            cycles = 4;
+            addressing_mode = AddressingMode::Absolute;
+        }
+        0xFD => {
+            bytes = 3;
+            cycles = 4;
+            addressing_mode = AddressingMode::AbsoluteX;
+        }
+        0xF9 => {
+            bytes = 3;
+            cycles = 4;
+            addressing_mode = AddressingMode::AbsoluteY;
+        }
+        0xE1 => {
+            bytes = 2;
+            cycles = 6;
+            addressing_mode = AddressingMode::IndirectX;
+        }
+        0xF1 => {
+            bytes = 2;
+            cycles = 5;
+            addressing_mode = AddressingMode::IndirectY;
+        }
+        _ => {
+        }
+    }
+
+    Instruction {
+        value: value,
+        itype: itype,
+        addressing_mode: addressing_mode,
+        cycles: cycles,
+        bytes: bytes,
+    }
+}
+
+fn sta(value: u8) -> Instruction {
+    let itype = InstructionType::STA;
+    let mut bytes = 0;
+    let mut cycles = 0;
+    let mut addressing_mode = AddressingMode::Implied;
+
+    match value {
+        0x85 => {
+            bytes = 2;
+            cycles = 3;
+            addressing_mode = AddressingMode::ZeroPage;
+        }
+        0x95 => {
+            bytes = 2;
+            cycles = 4;
+            addressing_mode = AddressingMode::ZeroPageX;
+        }
+        0x8D => {
+            bytes = 3;
+            cycles = 4;
+            addressing_mode = AddressingMode::Absolute;
+        }
+        0x9D => {
+            bytes = 3;
+            cycles = 5;
+            addressing_mode = AddressingMode::AbsoluteX;
+        }
+        0x99 => {
+            bytes = 3;
+            cycles = 5;
+            addressing_mode = AddressingMode::AbsoluteY;
+        }
+        0x81 => {
+            bytes = 2;
+            cycles = 6;
+            addressing_mode = AddressingMode::IndirectX;
+        }
+        0x91 => {
+            bytes = 2;
+            cycles = 6;
+            addressing_mode = AddressingMode::IndirectY;
+        }
+        _ => {
+        }
+    }
+
+    Instruction {
+        value: value,
+        itype: itype,
+        addressing_mode: addressing_mode,
+        cycles: cycles,
+        bytes: bytes,
+    }
+}
+
+fn stx(value: u8) -> Instruction {
+    let itype = InstructionType::STX;
+    let mut bytes = 0;
+    let mut cycles = 0;
+    let mut addressing_mode = AddressingMode::Implied;
+
+    match value {
+        0x86 => {
+            bytes = 2;
+            cycles = 3;
+            addressing_mode = AddressingMode::ZeroPage;
+        }
+        0x96 => {
+            bytes = 2;
+            cycles = 4;
+            addressing_mode = AddressingMode::ZeroPageY;
+        }
+        0x8E => {
+            bytes = 3;
+            cycles = 4;
+            addressing_mode = AddressingMode::Absolute;
+        }
+        _ => {
+        }
+    }
+
+    Instruction {
+        value: value,
+        itype: itype,
+        addressing_mode: addressing_mode,
+        cycles: cycles,
+        bytes: bytes,
+    }
+}
+
+fn sty(value: u8) -> Instruction {
+    let itype = InstructionType::STY;
+    let mut bytes = 0;
+    let mut cycles = 0;
+    let mut addressing_mode = AddressingMode::Implied;
+
+    match value {
+        0x84 => {
+            bytes = 2;
+            cycles = 3;
+            addressing_mode = AddressingMode::ZeroPage;
+        }
+        0x94 => {
+            bytes = 2;
+            cycles = 4;
+            addressing_mode = AddressingMode::ZeroPageX;
+        }
+        0x8C => {
+            bytes = 3;
+            cycles = 4;
+            addressing_mode = AddressingMode::Absolute;
+        }
+        _ => {
         }
     }
 
@@ -588,10 +1061,10 @@ fn lda(value: u8) -> Instruction {
 
 impl Instruction {
     pub fn new(value: u8) -> Instruction {
-        let itype: InstructionType;
-        let mut addressing_mode = AddressingMode::Immediate;
-        let mut cycles: u8 = 1;
-        let mut bytes: u8 = 1;
+        let itype = InstructionType::NOP;
+        let addressing_mode = AddressingMode::Immediate;
+        let cycles: u8 = 1;
+        let bytes: u8 = 1;
 
         match value {
             0x69 | 0x65 | 0x75 | 0x6D | 0x7D | 0x79 | 0x61 | 0x71 => {
@@ -678,13 +1151,13 @@ impl Instruction {
                 return Instruction {
                     value: value, itype: InstructionType::CLI, bytes: 1,
                     cycles: 2, addressing_mode: AddressingMode::Implied,
-                }
+                };
             }
             0xB8 => {
                 return Instruction {
                     value: value, itype: InstructionType::CLV, bytes: 1,
                     cycles: 2, addressing_mode: AddressingMode::Implied,
-                }
+                };
             }
             0xC9 | 0xC5 | 0xD5 | 0xCD | 0xDD | 0xD9 | 0xC1 | 0xD1 => {
                 return cmp(value);
@@ -699,13 +1172,13 @@ impl Instruction {
                 return Instruction {
                     value: value, itype: InstructionType::DEX, bytes: 1,
                     cycles: 2, addressing_mode: AddressingMode::Implied,
-                }
+                };
             }
             0x88 => {
                 return Instruction {
                     value: value, itype: InstructionType::DEY, bytes: 1,
                     cycles: 2, addressing_mode: AddressingMode::Implied,
-                }
+                };
             }
             0x49 | 0x45 | 0x55 | 0x4D | 0x5D | 0x59 | 0x41 | 0x51 => {
                 return eor(value);
@@ -717,13 +1190,13 @@ impl Instruction {
                 return Instruction {
                     value: value, itype: InstructionType::INX, bytes: 1,
                     cycles: 2, addressing_mode: AddressingMode::Implied,
-                }
+                };
             }
             0xC8 => {
                 return Instruction {
                     value: value, itype: InstructionType::INY, bytes: 1,
                     cycles: 2, addressing_mode: AddressingMode::Implied,
-                }
+                };
             }
             0x4C | 0x6C => {
                 return jmp(value);
@@ -732,91 +1205,137 @@ impl Instruction {
                 return Instruction {
                     value: value, itype: InstructionType::JSR, bytes: 3,
                     cycles: 6, addressing_mode: AddressingMode::Absolute,
-                }
+                };
             }
             0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
                 return lda(value);
             }
             0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE => {
-                itype = InstructionType::LDX;
+                return ldx(value);
             }
             0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => {
-                itype = InstructionType::LDY;
+                return ldy(value);
             }
             0x4A | 0x46 | 0x56 | 0x4E | 0x5E => {
-                itype = InstructionType::LSR;
+                return lsr(value);
             }
             0xEA => {
-                itype = InstructionType::NOP;
+                return Instruction {
+                    value: value, itype: InstructionType::NOP, bytes: 1,
+                    cycles: 2, addressing_mode: AddressingMode::Implied,
+                };
             }
             0x09 | 0x15 | 0x05 | 0x0D | 0x1D | 0x19 | 0x01 | 0x11 => {
-                itype = InstructionType::ORA;
+                return ora(value);
             }
             0x48 => {
-                itype = InstructionType::PHA;
+                return Instruction {
+                    value: value, itype: InstructionType::PHA, bytes: 1,
+                    cycles: 3, addressing_mode: AddressingMode::Implied,
+                };
             }
             0x08 => {
-                itype = InstructionType::PHP;
+                return Instruction {
+                    value: value, itype: InstructionType::PHP, bytes:1,
+                    cycles: 3, addressing_mode: AddressingMode::Implied,
+                };
             }
             0x68 => {
-                itype = InstructionType::PLA;
+                return Instruction {
+                    value: value, itype: InstructionType::PLA, bytes: 1,
+                    cycles: 4, addressing_mode: AddressingMode::Implied,
+                };
             }
             0x28 => {
-                itype = InstructionType::PLP;
+                return Instruction {
+                    value: value, itype: InstructionType::PLP, bytes: 1,
+                    cycles: 4, addressing_mode: AddressingMode::Implied,
+                };
             }
             0x2A | 0x26 | 0x36 | 0x2E | 0x3E => {
-                itype = InstructionType::ROL;
+                return rol(value);
             }
             0x6A | 0x66 | 0x76 | 0x6E | 0x7E => {
-                itype = InstructionType::ROR;
+                return ror(value);
             }
             0x40 => {
-                itype = InstructionType::RTI;
+                return Instruction {
+                    value: value, itype: InstructionType::RTI, bytes: 1,
+                    cycles: 6, addressing_mode: AddressingMode::Implied,
+                };
             }
             0x60 => {
-                itype = InstructionType::RTS;
+                return Instruction {
+                    value: value, itype: InstructionType::RTS, bytes: 1,
+                    cycles: 6, addressing_mode: AddressingMode::Implied,
+                };
             }
             0xE9 | 0xE5 | 0xF5 | 0xED | 0xFD | 0xF9 | 0xE1 | 0xF1 => {
-                itype = InstructionType::SBC;
+                return sbc(value);
             }
             0x38 => {
-                itype = InstructionType::SEC;
+                return Instruction {
+                    value: value, itype: InstructionType::SEC, bytes: 1,
+                    cycles: 2, addressing_mode: AddressingMode::Implied,
+                };
             }
             0xF8 => {
-                itype = InstructionType::SED;
+                return Instruction {
+                    value: value, itype: InstructionType::SED, bytes: 1,
+                    cycles: 2, addressing_mode: AddressingMode::Implied,
+                };
             }
             0x78 => {
-                itype = InstructionType::SEI;
+                return Instruction {
+                    value: value, itype: InstructionType::SEI, bytes: 1,
+                    cycles: 2, addressing_mode: AddressingMode::Implied,
+                };
             }
             0x85 | 0x95 | 0x8D | 0x9D | 0x99 | 0x81 | 0x91 => {
-                itype = InstructionType::STA;
+                return sta(value);
             }
             0x86 | 0x96 | 0x8E => {
-                itype = InstructionType::STX;
+                return stx(value);
             }
             0x84 | 0x94 | 0x8C => {
-                itype = InstructionType::STY;
+                return sty(value);
             }
             0xAA => {
-                itype = InstructionType::TAX;
+                Instruction {
+                    value: value, itype: InstructionType::TAX, bytes:1,
+                    cycles: 2, addressing_mode: AddressingMode::Implied,
+                };
             }
             0xA8 => {
-                itype = InstructionType::TAY;
+                Instruction {
+                    value: value, itype: InstructionType::TAY, bytes:1,
+                    cycles: 2, addressing_mode: AddressingMode::Implied,
+                };
             }
             0xBA => {
-                itype = InstructionType::TSX;
+                Instruction {
+                    value: value, itype: InstructionType::TSX, bytes:1,
+                    cycles: 2, addressing_mode: AddressingMode::Implied,
+                };
             }
             0x8A => {
-                itype = InstructionType::TXA;
+                Instruction {
+                    value: value, itype: InstructionType::TXA, bytes:1,
+                    cycles: 2, addressing_mode: AddressingMode::Implied,
+                };
             }
             0x9A => {
-                itype = InstructionType::TXS;
-            }
+                Instruction {
+                    value: value, itype: InstructionType::TXS, bytes:1,
+                    cycles: 2, addressing_mode: AddressingMode::Implied,
+                };           }
             0x98 => {
-                itype = InstructionType::TYA;
+                Instruction {
+                    value: value, itype: InstructionType::TYA, bytes:1,
+                    cycles: 2, addressing_mode: AddressingMode::Implied,
+                };
             }
             _ => {
-                itype = InstructionType::NOP;
             }
         }
 
