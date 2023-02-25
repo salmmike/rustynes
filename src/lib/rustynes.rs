@@ -1,11 +1,13 @@
 mod cpu;
 mod ppu;
+mod bus;
 pub use cpu::CPU;
 pub use ppu::PPU;
 pub use cpu::Instruction;
+pub use bus::Bus;
 
 pub struct NES {
-    pub memory: Vec<u8>,
+    pub bus:Bus,
     pub cpu: CPU,
     pub ppu: PPU,
 
@@ -14,7 +16,7 @@ pub struct NES {
 impl NES {
     pub fn new() -> NES {
         NES {
-            memory: vec![0 as u8; 0xFFFF],
+            bus: Bus::new(),
             cpu: CPU::new(),
             ppu: PPU::new(),
         }

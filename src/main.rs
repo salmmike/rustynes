@@ -11,19 +11,17 @@ fn main() {
                        0x18, 0x6D, 0x01, 0x00, 0x88, 0xD0, 0xFA, 0x8D,
                        0x02, 0x00, 0xEA, 0xEA, 0xEA);
 
-    for i in 0..program.len() {
-        nes.memory[0x8000 + i] = program[i];
-    }
-    nes.cpu.set_pc(0x8000);
+    nes.cpu.set_ram(&mut nes.bus, &program, 0x1000);
+    nes.cpu.set_pc(0x1000);
 
-    while true {
-        nes.cpu.tick(&mut nes.memory);
-        nes.cpu.print_page(&nes.memory, 0);
-        nes.cpu.print_page(&nes.memory, 0x1000);
+    loop {
+        nes.cpu.tick(&mut nes.bus);
+        nes.cpu.print_page(&nes.bus, 0);
+        nes.cpu.print_page(&nes.bus, 0x1000);
         nes.cpu.print_register();
         nes.cpu.print_status();
         while nes.cpu.cycles > 0 {
-            nes.cpu.tick(&mut nes.memory);
+            nes.cpu.tick(&mut nes.bus);
         }
         stdin().read_line(&mut s).expect("Did not enter a correct string");
         if let Some('\n')=s.chars().next_back() {
