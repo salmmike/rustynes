@@ -232,76 +232,76 @@ impl CPU {
                 return self.ldy(bus);
             }
             InstructionType::LSR => {
-                return false;
+                return self.lsr(&instruction.addressing_mode, bus);
             }
             InstructionType::NOP => {
                 return false;
             }
             InstructionType::ORA => {
-                return false;
+                return self.ora(bus);
             }
             InstructionType::PHA => {
-                return false;
+                return self.pha(bus);
             }
             InstructionType::PHP => {
-                return false;
+                return self.php(bus);
             }
             InstructionType::PLA => {
-                return false;
+                return self.pla(bus);
             }
             InstructionType::PLP => {
-                return false;
+                return self.plp(bus);
             }
             InstructionType::ROL => {
-                return false;
+                return self.rol(&instruction.addressing_mode, bus);
             }
             InstructionType::ROR => {
-                return false;
+                return self.ror(&instruction.addressing_mode, bus);
             }
             InstructionType::RTI => {
-                return false;
+                return self.rti(bus);
             }
             InstructionType::RTS => {
-                return false;
+                return self.rts(bus);
             }
             InstructionType::SBC => {
                 return self.sbc(bus);
             }
             InstructionType::SEC => {
-                return false;
+                return self.sec();
             }
             InstructionType::SED => {
-                return false;
+                return self.sed();
             }
             InstructionType::SEI => {
-                return false;
+                return self.sei();
             }
             InstructionType::STA => {
-                return false;
+                return self.sta(bus);
             }
             InstructionType::STX => {
-                return false;
+                return self.stx(bus);
             }
             InstructionType::STY => {
-                return false;
+                return self.sty(bus);
             }
             InstructionType::TAX => {
-                return false;
+                return self.tax();
             }
             InstructionType::TAY => {
-                return false;
+                return self.tay();
             }
             InstructionType::TSX => {
-                return false;
+                return self.tsx();
             }
             InstructionType::TXA => {
-                return false;
+                return self.txa();
             }
             InstructionType::TXS => {
-                return false;
+                return self.txs();
             }
             InstructionType::TYA => {
-                return false;
+                return self.tya();
             }
         }
     }
@@ -330,6 +330,41 @@ impl CPU {
             self.status ^= flag as u8;
         }
     }
+
+    fn set_value_flags(&mut self, value: u8) {
+        if value == 0 {
+            self.set_flag(StatusFlags::Z)
+        } else if value & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+    }
+
+    fn set_accumulator_flags(&mut self) {
+        self.set_value_flags(self.a);
+    }
+
+    fn get_value(&mut self, mode: &AddressingMode, bus: &Vec<u8>) -> u8 {
+        match mode {
+            AddressingMode::Accumulator => {
+                return self.a;
+            }
+            _ => {
+                return bus[self.address];
+            }
+        }
+    }
+
+    fn store_value(&mut self, mode: &AddressingMode, bus: &mut Vec<u8>, value: u8) {
+        match mode {
+            AddressingMode::Accumulator => {
+                self.a = value;
+            }
+            _ => {
+                bus[self.address] = value;
+            }
+        }
+    }
+
 
     /* Different addressing modes: */
     fn immediate(&mut self) -> bool {
@@ -475,27 +510,14 @@ impl CPU {
 
     fn and(&mut self, bus: &mut Vec<u8>) -> bool {
         self.a &= self.fetch_memory(bus);
-        if self.a == 0 {
-            self.set_flag(StatusFlags::Z);
-        }
-        else if self.a & 0x80 == 0x80 {
-            self.set_flag(StatusFlags::N);
-        }
+        self.set_accumulator_flags();
 
         return true;
     }
 
     fn asl(&mut self, mode: &AddressingMode, bus: &mut Vec<u8>) -> bool {
-        let mut val: u8;
+        let mut val = self.get_value(mode, bus);
 
-        match mode {
-            AddressingMode::Accumulator => {
-                val = self.a;
-            }
-            _ => {
-                val = bus[self.address];
-            }
-        }
         if val & 0x80 == 0x80 {
             self.set_flag(StatusFlags::C);
             val ^= 0x80;
@@ -507,15 +529,7 @@ impl CPU {
         } else if val & 0x80 == 0x80 {
             self.set_flag(StatusFlags::N);
         }
-
-        match mode {
-            AddressingMode::Accumulator => {
-                self.a = val;
-            }
-            _ => {
-                bus[self.address] = val;
-            }
-        }
+        self.store_value(mode, bus, val);
 
         return false;
     }
@@ -664,12 +678,7 @@ impl CPU {
 
     fn eor(&mut self, bus: &Vec<u8>) -> bool {
         self.a ^= bus[self.address];
-        if self.a == 0 {
-            self.set_flag(StatusFlags::Z);
-        }
-        else if self.a & 0x80 == 0x80 {
-            self.set_flag(StatusFlags::N);
-        }
+        self.set_accumulator_flags();
         return true;
     }
 
@@ -721,11 +730,7 @@ impl CPU {
 
     fn lda(&mut self, bus: &Vec<u8>) -> bool {
         self.a = bus[self.address];
-        if self.a == 0 {
-            self.set_flag(StatusFlags::Z)
-        } else if self.a & 0x80 == 0x80 {
-            self.set_flag(StatusFlags::N);
-        }
+        self.set_accumulator_flags();
         return true;
     }
 
@@ -749,7 +754,198 @@ impl CPU {
         return true;
     }
 
-}
+    fn lsr(&mut self, mode: &AddressingMode, bus: &mut Vec<u8>) -> bool {
+        let val= self.get_value(mode, bus);
+
+        if val == 0 {
+            self.set_flag(StatusFlags::C);
+            return false;
+        }
+        if val & 0x01 == 0x01 {
+            self.set_flag(StatusFlags::C);
+        } else {
+            self.clear_flag(StatusFlags::C);
+        }
+
+        let res = (((val as i16) >> 1) & 0xFF) as u8;
+        if res == 0 {
+            self.set_flag(StatusFlags::Z)
+        } else if res & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+
+        self.store_value(mode, bus, res & 0x7F);
+        return false;
+    }
+
+    fn ora(&mut self, bus: &Vec<u8>) -> bool {
+        let val = bus[self.address];
+
+        self.a |= val;
+        self.set_accumulator_flags();
+
+        return true;
+    }
+
+    fn pha(&mut self, bus: &mut Vec<u8>) -> bool {
+        bus[self.sp] = self.a;
+        self.sp -= 1;
+        return false;
+    }
+
+    fn php(&mut self, bus: &mut Vec<u8>) -> bool {
+        bus[self.sp] = self.status;
+        self.sp -= 1;
+        return false;
+    }
+
+    fn pla(&mut self, bus: &mut Vec<u8>) -> bool {
+        self.a = bus[self.sp];
+        self.sp += 1;
+        self.set_accumulator_flags();
+        return false;
+    }
+
+    fn plp(&mut self, bus: &Vec<u8>) -> bool {
+        self.status = bus[self.sp];
+        self.sp += 1;
+        return false;
+    }
+
+    fn rol(&mut self, mode: &AddressingMode, bus: &mut Vec<u8>) -> bool {
+
+        let val = self.get_value(mode, bus);
+        let mut res = (((val as u16) << 1) & 0xFF) as u8;
+
+        if self.check_flag(StatusFlags::C) {
+            res |= 1;
+        }
+
+        if res == 0 {
+            self.set_flag(StatusFlags::Z)
+        } else if res & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+
+        if val & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::C);
+        } else {
+            self.clear_flag(StatusFlags::C);
+        }
+
+        self.store_value(mode, bus, res);
+        return false;
+    }
+
+    fn ror(&mut self, mode: &AddressingMode, bus: &mut Vec<u8>) -> bool {
+
+        let val = self.get_value(mode, bus);
+        let mut res = (((val as i16) >> 1) & 0xFF) as u8;
+
+        if self.check_flag(StatusFlags::C) {
+            res |= 0x80;
+        }
+
+        if res == 0 {
+            self.set_flag(StatusFlags::Z)
+        } else if res & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+
+        if val & 0x1 == 0x1 {
+            self.set_flag(StatusFlags::C);
+        } else {
+            self.clear_flag(StatusFlags::C);
+        }
+
+        self.store_value(mode, bus, res);
+        return false;
+    }
+
+    fn rti(&mut self, bus: &Vec<u8>) -> bool {
+        self.status = bus[self.sp];
+        self.pc = (bus[self.sp + 1] as usize) << 8 | bus[self.sp + 2] as usize;
+        self.sp += 3;
+        return false;
+    }
+
+    fn rts(&mut self, bus: &Vec<u8>) -> bool {
+        self.pc = (bus[self.sp] as usize) << 8 | bus[self.sp + 1] as usize;
+        self.sp += 2;
+        return false;
+    }
+
+    fn sec(&mut self) -> bool {
+        self.set_flag(StatusFlags::C);
+        return false;
+    }
+
+    fn sed(&mut self) -> bool {
+        self.set_flag(StatusFlags::D);
+        return false;
+    }
+
+    fn sei(&mut self) -> bool {
+        self.set_flag(StatusFlags::I);
+        return false;
+    }
+
+    fn sta(&mut self, bus: &mut Vec<u8>) -> bool {
+        bus[self.address] = self.a;
+        return false;
+    }
+
+    fn stx(&mut self, bus: &mut Vec<u8>) -> bool {
+        bus[self.address] = self.x;
+        return false;
+    }
+
+    fn sty(&mut self, bus: &mut Vec<u8>) -> bool {
+        bus[self.address] = self.y;
+        return false;
+    }
+
+    fn tax(&mut self) -> bool {
+        self.x = self.a;
+        self.set_accumulator_flags();
+
+        return false;
+    }
+
+    fn tay(&mut self) -> bool {
+        self.y = self.a;
+        self.set_accumulator_flags();
+
+        return false;
+    }
+
+    fn tsx(&mut self) -> bool {
+        self.x = self.sp as u8;
+        self.set_value_flags(self.x);
+
+        return false;
+    }
+
+    fn txa(&mut self) -> bool {
+        self.a = self.x;
+        self.set_accumulator_flags();
+
+        return false;
+    }
+
+    fn txs(&mut self) -> bool {
+        self.sp = self.x as usize;
+        self.set_value_flags(self.x);
+
+        return false;
+    }
+
+    fn tya(&mut self) -> bool {
+        self.a = self.y;
+        self.set_accumulator_flags();
+
+        return false;
+    }}
 
 
 #[cfg(test)]
