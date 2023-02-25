@@ -5,9 +5,9 @@ pub use ppu::PPU;
 pub use cpu::Instruction;
 
 pub struct NES {
-    memory: Vec<u8>,
-    cpu: CPU,
-    ppu: PPU,
+    pub memory: Vec<u8>,
+    pub cpu: CPU,
+    pub ppu: PPU,
 
 }
 

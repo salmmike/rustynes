@@ -35,7 +35,7 @@ pub struct CPU {
     /// Processor status flag register
     status: u8,
     /// Cycles left for current instruction
-    cycles: u8,
+    pub cycles: u8,
     /// Address pointed by the addressing mode
     address: usize,
     /// Relative address for branching
@@ -52,7 +52,7 @@ impl CPU {
             x: 0,
             y: 0,
             pc: 0,
-            sp: 0,
+            sp: 0x100,
             status: 0,
             cycles: 0,
             address: 0,
@@ -73,6 +73,60 @@ impl CPU {
         if add_cycles {
             self.cycles += 1;
         }
+        instruction.print();
+    }
+
+    pub fn print_register(&self) {
+        println!("Registers: ");
+        println!("PC: {:#04x}", self.pc);
+        println!("A: {:#04x}", self.a);
+        println!("X: {:#04x}", self.x);
+        println!("Y: {:#04x}", self.y);
+        println!("SP: {:#04x}", self.sp);
+        print!("");
+    }
+
+    pub fn set_pc(&mut self, pc: usize) {
+        self.pc = pc;
+    }
+
+    pub fn print_page(&self, bus: &Vec<u8>, start: usize) {
+        println!("Memory:");
+        for i in 0..16 as usize {
+            self.print_mem(bus, start + i*0x10);
+            print!("\n");
+        }
+    }
+
+    fn print_mem(&self, bus: &Vec<u8>, start: usize) {
+        print!("${:#04x}:", start);
+        for i in 0..16 as usize {
+            print!("  {:#04x}", bus[start + i]);
+        }
+    }
+
+    pub fn print_instructions(&self, bus: &Vec<u8>) {
+        println!("Instructions:");
+        for i in 0..10 {
+            let instruction = Instruction::new(bus[self.pc - 5 + i]);
+            if i == 5 {
+                print!("** ");
+            }
+            print!("${:#04x}: ", self.pc -5 + i);
+            instruction.print();
+        }
+    }
+
+    pub fn print_status(&self) {
+        println!("C: {}, Z: {}, I: {}, D: {}, B: {}, V: {}, N: {}",
+               self.check_flag(StatusFlags::C) as u8,
+               self.check_flag(StatusFlags::Z) as u8,
+               self.check_flag(StatusFlags::I) as u8,
+               self.check_flag(StatusFlags::D) as u8,
+               self.check_flag(StatusFlags::B) as u8,
+               self.check_flag(StatusFlags::V) as u8,
+               self.check_flag(StatusFlags::N) as u8
+            )
     }
 
     /// Fetch memory pointed by program counter
@@ -365,7 +419,6 @@ impl CPU {
         }
     }
 
-
     /* Different addressing modes: */
     fn immediate(&mut self) -> bool {
         self.address = self.pc;
@@ -451,11 +504,32 @@ impl CPU {
 
     fn relative(&mut self, bus: &Vec<u8>) -> bool {
         self.branch_address = bus[self.pc] as usize;
+        println!("Branch address: {:#04x}", self.branch_address);
         self.pc += 1;
         if (self.branch_address & 0x80) == 0x80 {
             self.branch_address |= 0xFF00;
         }
+        println!("Branch address: {:#04x}", self.branch_address);
         return false;
+    }
+
+    pub fn irq(&mut self, bus: &mut Vec<u8>) {
+        if !self.check_flag(StatusFlags::I) {
+            self.nmi(bus);
+        }
+    }
+
+    pub fn nmi(&mut self, bus: &mut Vec<u8>) {
+        bus[self.sp] = ((self.pc & 0xFF00) >> 8) as u8;
+        bus[self.sp - 1] = (self.pc & 0xFF) as u8;
+        self.sp -= 2;
+        self.clear_flag(StatusFlags::B);
+        self.set_flag(StatusFlags::I);
+
+        self.address = 0xFFEE;
+        self.pc = bus[self.address] as usize |
+                    (((bus[self.address + 1]) as usize) << 8);
+        self.cycles = 8;
     }
 
     /* Instruction implementations */
@@ -470,8 +544,11 @@ impl CPU {
         }
         if res.1 == 0 {
             self.set_flag(StatusFlags::Z);
-        } else if res.1 & 0x80 == 0x80 {
-            self.set_flag(StatusFlags::N);
+        } else {
+            self.clear_flag(StatusFlags::Z); 
+            if res.1 & 0x80 == 0x80 {
+                self.set_flag(StatusFlags::N);
+            }
         }
         if (val & 0x80 == 0x80) && (res.1 & 0x80 == 0x80) && (self.a & 0x80 != 0x80)
             || (val & 0x80 == 0) && (res.1 & 0x80 == 0) && (self.a & 0x80 != 0) {
@@ -487,8 +564,6 @@ impl CPU {
         if !self.check_flag(StatusFlags::C) {
             val += 1;
         }
-
-        //val  ^= 0xFF;
 
         let res = self.overflow_subtract(self.a, val);
         if res.0 {
@@ -542,6 +617,7 @@ impl CPU {
             if prev & 0xFF00 != self.pc & 0xFF00 {
                 self.cycles += 1;
             }
+            self.pc &= 0xFFFF;
         }
         return false;
     }
@@ -594,22 +670,22 @@ impl CPU {
     }
 
     fn clc(&mut self) -> bool {
-        self.status &= 0xFF & StatusFlags::C as u8;
+        self.clear_flag(StatusFlags::C);
         return false;
     }
 
     fn cli(&mut self) -> bool {
-        self.status &= 0xFF & StatusFlags::I as u8;
+        self.clear_flag(StatusFlags::I);
         return false;
     }
 
     fn cld(&mut self) -> bool {
-        self.status &= 0xFF & StatusFlags::D as u8;
+        self.clear_flag(StatusFlags::D);
         return false;
     }
 
     fn clv(&mut self) -> bool {
-        self.status &= 0xFF & StatusFlags::V as u8;
+        self.clear_flag(StatusFlags::V);
         return false;
     }
 
@@ -720,8 +796,9 @@ impl CPU {
     }
 
     fn jsr(&mut self, bus: &mut Vec<u8>) -> bool {
-        bus[self.sp] = ((self.pc - 1) & 0xFF) as u8;
-        bus[self.sp +1] = (((self.pc - 1) & 0xFF00) >> 8) as u8;
+        self.pc += 1;
+        bus[self.sp] = (((self.pc) & 0xFF00) >> 8) as u8;
+        bus[self.sp - 1] = ((self.pc) & 0xFF) as u8;
         self.sp -= 2;
 
         self.pc = self.address;
@@ -794,6 +871,7 @@ impl CPU {
     }
 
     fn php(&mut self, bus: &mut Vec<u8>) -> bool {
+        self.set_flag(StatusFlags::B);
         bus[self.sp] = self.status;
         self.sp -= 1;
         return false;

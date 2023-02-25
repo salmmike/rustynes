@@ -1,4 +1,5 @@
 
+#[derive(Debug)]
 pub enum InstructionType {
     /// Arithmetic
     ADC,
@@ -44,6 +45,7 @@ pub enum InstructionType {
     TAX, TAY, TSX, TXA, TXS, TYA,
 }
 
+#[derive(Debug)]
 pub enum AddressingMode {
     Accumulator,
     Immediate,
@@ -1348,4 +1350,8 @@ impl Instruction {
             bytes: bytes,
         }
     }
+    pub fn print(&self) {
+        println!("Instruction: {:?}, Addressing {:?}", self.itype, self.addressing_mode);
+    }
+
 }
