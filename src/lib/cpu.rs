@@ -387,9 +387,14 @@ impl CPU {
 
     fn set_value_flags(&mut self, value: u8) {
         if value == 0 {
-            self.set_flag(StatusFlags::Z)
-        } else if value & 0x80 == 0x80 {
-            self.set_flag(StatusFlags::N);
+            self.set_flag(StatusFlags::Z);
+        } else {
+            self.clear_flag(StatusFlags::Z);
+            if value & 0x80 == 0x80 {
+                self.set_flag(StatusFlags::N);
+            } else {
+                self.clear_flag(StatusFlags::N);
+            }
         }
     }
 
@@ -542,14 +547,9 @@ impl CPU {
         if res.0 {
             self.set_flag(StatusFlags::C);
         }
-        if res.1 == 0 {
-            self.set_flag(StatusFlags::Z);
-        } else {
-            self.clear_flag(StatusFlags::Z); 
-            if res.1 & 0x80 == 0x80 {
-                self.set_flag(StatusFlags::N);
-            }
-        }
+
+        self.set_value_flags(res.1);
+
         if (val & 0x80 == 0x80) && (res.1 & 0x80 == 0x80) && (self.a & 0x80 != 0x80)
             || (val & 0x80 == 0) && (res.1 & 0x80 == 0) && (self.a & 0x80 != 0) {
             self.set_flag(StatusFlags::V);
@@ -569,12 +569,12 @@ impl CPU {
         if res.0 {
             self.set_flag(StatusFlags::C);
         }
-        if res.1 == 0 {
-            self.set_flag(StatusFlags::Z);
-        } else if res.1 & 0x80 == 0x80 {
-            self.set_flag(StatusFlags::N);
+        self.set_value_flags(res.1);
+
+        if res.1 & 0x80 == 0x80 {
             self.clear_flag(StatusFlags::C);
         }
+
         if (val & 0x80 == 0x80) && (res.1 & 0x80 == 0x80) && (self.a & 0x80 != 0x80)
             || (val & 0x80 == 0) && (res.1 & 0x80 == 0) && (self.a & 0x80 != 0) {
             self.set_flag(StatusFlags::V);
@@ -599,11 +599,8 @@ impl CPU {
         }
         val *= 2;
 
-        if val == 0 {
-            self.set_flag(StatusFlags::Z);
-        } else if val & 0x80 == 0x80 {
-            self.set_flag(StatusFlags::N);
-        }
+        self.set_value_flags(val);
+
         self.store_value(mode, bus, val);
 
         return false;
@@ -636,16 +633,12 @@ impl CPU {
     fn bit(&mut self, bus: &Vec<u8>) -> bool {
         let res = self.a & bus[self.address];
 
-        if res == 0 {
-            self.set_flag(StatusFlags::Z);
-        } else {
-            if res & 0x80 == 0x80 {
-                self.set_flag(StatusFlags::N);
-            }
-            if res & 0x40 == 0x40 {
-                self.set_flag(StatusFlags::V);
-            }
+        self.set_value_flags(res);
+
+        if res & 0x40 == 0x40 {
+            self.set_flag(StatusFlags::V);
         }
+
         return false;
     }
 
@@ -690,6 +683,10 @@ impl CPU {
     }
 
     fn compare(&mut self, bus: &Vec<u8>, value: u8) {
+        self.clear_flag(StatusFlags::C);
+        self.clear_flag(StatusFlags::Z);
+        self.clear_flag(StatusFlags::N);
+
         if value >= bus[self.address] {
             self.set_flag(StatusFlags::C);
         }
@@ -719,12 +716,7 @@ impl CPU {
     fn dec(&mut self, bus: &mut Vec<u8>) -> bool {
         let res = self.overflow_subtract(bus[self.address], 1);
         bus[self.address] = res.1;
-        if res.1 == 0 {
-            self.set_flag(StatusFlags::Z);
-        }
-        if res.1 & 0x80 == 0x80 {
-            self.set_flag(StatusFlags::N);
-        }
+        self.set_value_flags(res.1);
 
         return false;
     }
@@ -732,23 +724,15 @@ impl CPU {
     fn dex(&mut self) -> bool {
         let res = self.overflow_subtract(self.x, 1);
         self.x = res.1;
-        if res.1 == 0 {
-            self.set_flag(StatusFlags::Z);
-        }
-        else if res.1 & 0x80 == 0x80 {
-            self.set_flag(StatusFlags::N);
-        }
+        self.set_value_flags(res.1);
+
         return false;
     }
     fn dey(&mut self) -> bool {
         let res = self.overflow_subtract(self.y, 1);
         self.y = res.1;
-        if res.1 == 0 {
-            self.set_flag(StatusFlags::Z);
-        }
-        else if res.1 & 0x80 == 0x80 {
-            self.set_flag(StatusFlags::N);
-        }
+        self.set_value_flags(res.1);
+
         return false;
     }
 
@@ -771,22 +755,15 @@ impl CPU {
     fn inx(&mut self) -> bool {
         let res = self.overflow_add(self.x, 1);
         self.x = res.1;
-        if self.x == 0 {
-            self.set_flag(StatusFlags::Z);
-        } else if self.x & 0x80 == 0x80 {
-            self.set_flag(StatusFlags::N);
-        }
+        self.set_value_flags(self.x);
+
         return false;
     }
 
     fn iny(&mut self) -> bool {
         let res = self.overflow_add(self.y, 1);
         self.y = res.1;
-        if self.x == 0 {
-            self.set_flag(StatusFlags::Z);
-        } else if self.x & 0x80 == 0x80 {
-            self.set_flag(StatusFlags::N);
-        }
+        self.set_value_flags(self.y);
         return false;
     }
 
@@ -823,11 +800,7 @@ impl CPU {
 
     fn ldy(&mut self, bus: &Vec<u8>) -> bool {
         self.y = bus[self.address];
-        if self.y == 0 {
-            self.set_flag(StatusFlags::Z)
-        } else if self.y & 0x80 == 0x80 {
-            self.set_flag(StatusFlags::N);
-        }
+        self.set_value_flags(self.y);
         return true;
     }
 
@@ -845,11 +818,7 @@ impl CPU {
         }
 
         let res = (((val as i16) >> 1) & 0xFF) as u8;
-        if res == 0 {
-            self.set_flag(StatusFlags::Z)
-        } else if res & 0x80 == 0x80 {
-            self.set_flag(StatusFlags::N);
-        }
+        self.set_value_flags(res);
 
         self.store_value(mode, bus, res & 0x7F);
         return false;
@@ -1023,7 +992,8 @@ impl CPU {
         self.set_accumulator_flags();
 
         return false;
-    }}
+    }
+}
 
 
 #[cfg(test)]

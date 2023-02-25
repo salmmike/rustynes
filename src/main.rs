@@ -1,5 +1,5 @@
 use rustyneslib::NES;
-use std::io::{stdin,stdout,Write};
+use std::io::{stdin};
 
 fn main() {
     let mut s=String::new();
