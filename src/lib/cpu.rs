@@ -67,16 +67,16 @@ impl CPU {
             return;
         }
         let instruction = self.fetch_instruction(bus);
-        self.cycles = instruction.cycles;
+        self.cycles = instruction.cycles - 1; // Remove this cycle
         let mut add_cycles = self.addressing_mode(&instruction.addressing_mode, bus);
-        add_cycles |= self.execute(&instruction, bus);
+        add_cycles &= self.execute(&instruction, bus);
         if add_cycles {
             self.cycles += 1;
         }
     }
 
     /// Fetch memory pointed by program counter
-    fn fetch_instruction(&mut self, bus: &mut Vec<u8>) -> Instruction {
+    fn fetch_instruction(&mut self, bus: &Vec<u8>) -> Instruction {
         let ret = Instruction::new(bus[self.pc]);
         self.pc += 1;
         ret
@@ -136,13 +136,13 @@ impl CPU {
     fn execute(&mut self, instruction: &Instruction, bus: &mut Vec<u8>) -> bool {
         match instruction.itype {
             InstructionType::ADC => {
-                return self.adc(instruction, bus);
+                return self.adc(bus);
             }
             InstructionType::AND => {
-                return self.and(instruction, bus);
+                return self.and(bus);
             }
             InstructionType::ASL => {
-                return false;
+                return self.asl(&instruction.addressing_mode, bus);
             }
             InstructionType::BCC => {
                 return self.bcc();
@@ -187,49 +187,49 @@ impl CPU {
                 return self.clv();
             }
             InstructionType::CMP => {
-                return false;
+                return self.cmp(bus);
             }
             InstructionType::CPX => {
-                return false;
+                return self.cpx(bus);
             }
             InstructionType::CPY => {
-                return false;
+                return self.cpy(bus);
             }
             InstructionType::DEC => {
-                return false;
+                return self.dec(bus);
             }
             InstructionType::DEX => {
-                return false;
+                return self.dex();
             }
             InstructionType::DEY => {
-                return false;
+                return self.dey();
             }
             InstructionType::EOR => {
-                return false;
+                return self.eor(bus);
             }
             InstructionType::INC => {
-                return false;
+                return self.inc(bus);
             }
             InstructionType::INX => {
-                return false;
+                return self.inx();
             }
             InstructionType::INY => {
-                return false;
+                return self.iny();
             }
             InstructionType::JMP => {
-                return false;
+                return self.jmp();
             }
             InstructionType::JSR => {
-                return false;
+                return self.jsr(bus);
             }
             InstructionType::LDA => {
-                return false;
+                return self.lda(bus);
             }
             InstructionType::LDX => {
-                return false;
+                return self.ldx(bus);
             }
             InstructionType::LDY => {
-                return false;
+                return self.ldy(bus);
             }
             InstructionType::LSR => {
                 return false;
@@ -265,7 +265,7 @@ impl CPU {
                 return false;
             }
             InstructionType::SBC => {
-                return false;
+                return self.sbc(bus);
             }
             InstructionType::SEC => {
                 return false;
@@ -306,12 +306,29 @@ impl CPU {
         }
     }
 
+    fn overflow_add(&self, a: u8, b: u8) -> (bool, u8) {
+        let res = a as u16 + b as u16;
+        (res > 0xFF, (res & 0xFF) as u8)
+    }
+
+    fn overflow_subtract(&self, a: u8, b: u8) -> (bool, u8) {
+        let res = a as i16 - b as i16;
+        (res < 0, (res & 0xFF) as u8)
+    }
+
+
     fn set_flag(&mut self, flag: StatusFlags) {
         self.status |= flag as u8;
     }
 
     fn check_flag(&self, flag: StatusFlags) -> bool {
         return self.status & flag as u8 == flag as u8;
+    }
+
+    fn clear_flag(&mut self, flag: StatusFlags) {
+        if self.check_flag(flag) {
+            self.status ^= flag as u8;
+        }
     }
 
     /* Different addressing modes: */
@@ -407,11 +424,56 @@ impl CPU {
     }
 
     /* Instruction implementations */
-    fn adc(&mut self, instruction: &Instruction, bus: &mut Vec<u8>) -> bool {
-        return false;
+    fn adc(&mut self, bus: &mut Vec<u8>) -> bool {
+        let mut val = bus[self.address];
+        if self.check_flag(StatusFlags::C) {
+            val += 1;
+        }
+        let res = self.overflow_add(self.a, val);
+        if res.0 {
+            self.set_flag(StatusFlags::C);
+        }
+        if res.1 == 0 {
+            self.set_flag(StatusFlags::Z);
+        } else if res.1 & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+        if (val & 0x80 == 0x80) && (res.1 & 0x80 == 0x80) && (self.a & 0x80 != 0x80)
+            || (val & 0x80 == 0) && (res.1 & 0x80 == 0) && (self.a & 0x80 != 0) {
+            self.set_flag(StatusFlags::V);
+        }
+        self.a = res.1;
+        return true;
     }
 
-    fn and(&mut self, instruction: &Instruction, bus: &mut Vec<u8>) -> bool {
+    fn sbc(&mut self, bus: &Vec<u8>) -> bool {
+        let mut val = bus[self.address];
+
+        if !self.check_flag(StatusFlags::C) {
+            val += 1;
+        }
+
+        //val  ^= 0xFF;
+
+        let res = self.overflow_subtract(self.a, val);
+        if res.0 {
+            self.set_flag(StatusFlags::C);
+        }
+        if res.1 == 0 {
+            self.set_flag(StatusFlags::Z);
+        } else if res.1 & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+            self.clear_flag(StatusFlags::C);
+        }
+        if (val & 0x80 == 0x80) && (res.1 & 0x80 == 0x80) && (self.a & 0x80 != 0x80)
+            || (val & 0x80 == 0) && (res.1 & 0x80 == 0) && (self.a & 0x80 != 0) {
+            self.set_flag(StatusFlags::V);
+        }
+        self.a = res.1;
+        return true;
+    }
+
+    fn and(&mut self, bus: &mut Vec<u8>) -> bool {
         self.a &= self.fetch_memory(bus);
         if self.a == 0 {
             self.set_flag(StatusFlags::Z);
@@ -421,6 +483,41 @@ impl CPU {
         }
 
         return true;
+    }
+
+    fn asl(&mut self, mode: &AddressingMode, bus: &mut Vec<u8>) -> bool {
+        let mut val: u8;
+
+        match mode {
+            AddressingMode::Accumulator => {
+                val = self.a;
+            }
+            _ => {
+                val = bus[self.address];
+            }
+        }
+        if val & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::C);
+            val ^= 0x80;
+        }
+        val *= 2;
+
+        if val == 0 {
+            self.set_flag(StatusFlags::Z);
+        } else if val & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+
+        match mode {
+            AddressingMode::Accumulator => {
+                self.a = val;
+            }
+            _ => {
+                bus[self.address] = val;
+            }
+        }
+
+        return false;
     }
 
     fn branch_if(&mut self, value: bool) -> bool {
@@ -485,4 +582,238 @@ impl CPU {
         self.status &= 0xFF & StatusFlags::V as u8;
         return false;
     }
+
+    fn compare(&mut self, bus: &Vec<u8>, value: u8) {
+        if value >= bus[self.address] {
+            self.set_flag(StatusFlags::C);
+        }
+        if value == bus[self.address] {
+            self.set_flag(StatusFlags::Z);
+        }
+        if value & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+    }
+
+    fn cmp(&mut self, bus: &Vec<u8>) -> bool {
+        self.compare(bus, self.a);
+        return true;
+    }
+
+    fn cpx(&mut self, bus: &Vec<u8>) -> bool {
+        self.compare(bus, self.x);
+        return true;
+    }
+
+    fn cpy(&mut self, bus: &Vec<u8>) -> bool {
+        self.compare(bus, self.y);
+        return true;
+    }
+
+    fn dec(&mut self, bus: &mut Vec<u8>) -> bool {
+        let res = self.overflow_subtract(bus[self.address], 1);
+        bus[self.address] = res.1;
+        if res.1 == 0 {
+            self.set_flag(StatusFlags::Z);
+        }
+        if res.1 & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+
+        return false;
+    }
+
+    fn dex(&mut self) -> bool {
+        let res = self.overflow_subtract(self.x, 1);
+        self.x = res.1;
+        if res.1 == 0 {
+            self.set_flag(StatusFlags::Z);
+        }
+        else if res.1 & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+        return false;
+    }
+    fn dey(&mut self) -> bool {
+        let res = self.overflow_subtract(self.y, 1);
+        self.y = res.1;
+        if res.1 == 0 {
+            self.set_flag(StatusFlags::Z);
+        }
+        else if res.1 & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+        return false;
+    }
+
+    fn eor(&mut self, bus: &Vec<u8>) -> bool {
+        self.a ^= bus[self.address];
+        if self.a == 0 {
+            self.set_flag(StatusFlags::Z);
+        }
+        else if self.a & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+        return true;
+    }
+
+    fn inc(&mut self, bus: &mut Vec<u8>) -> bool {
+        let res = self.overflow_add(bus[self.address], 1);
+        if res.1 == 0 {
+            self.set_flag(StatusFlags::Z);
+        } else if res.1 & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+        return false;
+    }
+
+    fn inx(&mut self) -> bool {
+        let res = self.overflow_add(self.x, 1);
+        self.x = res.1;
+        if self.x == 0 {
+            self.set_flag(StatusFlags::Z);
+        } else if self.x & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+        return false;
+    }
+
+    fn iny(&mut self) -> bool {
+        let res = self.overflow_add(self.y, 1);
+        self.y = res.1;
+        if self.x == 0 {
+            self.set_flag(StatusFlags::Z);
+        } else if self.x & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+        return false;
+    }
+
+    fn jmp(&mut self) -> bool {
+        self.pc = self.address;
+        return false;
+    }
+
+    fn jsr(&mut self, bus: &mut Vec<u8>) -> bool {
+        bus[self.sp] = ((self.pc - 1) & 0xFF) as u8;
+        bus[self.sp +1] = (((self.pc - 1) & 0xFF00) >> 8) as u8;
+        self.sp -= 2;
+
+        self.pc = self.address;
+        return false;
+    }
+
+    fn lda(&mut self, bus: &Vec<u8>) -> bool {
+        self.a = bus[self.address];
+        if self.a == 0 {
+            self.set_flag(StatusFlags::Z)
+        } else if self.a & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+        return true;
+    }
+
+    fn ldx(&mut self, bus: &Vec<u8>) -> bool {
+        self.x = bus[self.address];
+        if self.x == 0 {
+            self.set_flag(StatusFlags::Z)
+        } else if self.x & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+        return true;
+    }
+
+    fn ldy(&mut self, bus: &Vec<u8>) -> bool {
+        self.y = bus[self.address];
+        if self.y == 0 {
+            self.set_flag(StatusFlags::Z)
+        } else if self.y & 0x80 == 0x80 {
+            self.set_flag(StatusFlags::N);
+        }
+        return true;
+    }
+
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::CPU;
+    use super::StatusFlags;
+
+    #[test]
+    pub fn test_flags() {
+        let mut cpu = CPU::new();
+        cpu.set_flag(StatusFlags::Z);
+        assert!(cpu.check_flag(StatusFlags::Z));
+    }
+
+    #[test]
+    pub fn test_subtract() {
+        let cpu = CPU::new();
+        assert_eq!(cpu.overflow_subtract(10, 10).1, 0);
+    }
+
+    #[test]
+    pub fn test_arithmetic() {
+        let mut cpu = CPU::new();
+        let mut bus: Vec<u8> = vec![0; 1000];
+        bus[0] = 0x69;
+        bus[1] = 10;
+        bus[2] = 0x69;
+        bus[3] = 10;
+        cpu.pc = 0;
+
+        cpu.tick(&mut bus);
+        cpu.tick(&mut bus);
+
+        assert_eq!(cpu.a, 10);
+        cpu.tick(&mut bus);
+        cpu.tick(&mut bus);
+
+        assert_eq!(cpu.a, 20);
+
+        cpu.pc = 0;
+        bus[0] = 0xE9;
+        cpu.tick(&mut bus);
+        cpu.tick(&mut bus);
+        assert_eq!(cpu.a, 9);
+
+        cpu.pc = 0;
+        bus[1] = 9;
+        cpu.set_flag(StatusFlags::C);
+        cpu.tick(&mut bus);
+        cpu.tick(&mut bus);
+        assert_eq!(cpu.a, 0);
+
+        cpu.pc = 0;
+        cpu.tick(&mut bus);
+        cpu.tick(&mut bus);
+        assert_eq!(cpu.a, cpu.overflow_subtract(0, 9).1);
+        assert!(!cpu.check_flag(StatusFlags::C));
+
+        cpu.a = 0;
+        cpu.pc = 0;
+        bus[0] = 0x69;
+        bus[1] = 0;
+
+        cpu.status = 0;
+        cpu.tick(&mut bus);
+        cpu.tick(&mut bus);
+
+        assert_eq!(cpu.a, 0);
+        assert!(cpu.check_flag(StatusFlags::Z));
+        assert!(!cpu.check_flag(StatusFlags::N));
+        assert!(!cpu.check_flag(StatusFlags::V));
+
+        cpu.pc = 0;
+        bus[1] = 0x80;
+        cpu.tick(&mut bus);
+        cpu.tick(&mut bus);
+
+        assert!(cpu.check_flag(StatusFlags::N));
+        assert!(cpu.check_flag(StatusFlags::V));
+
+    }
+
 }
