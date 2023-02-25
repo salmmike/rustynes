@@ -154,7 +154,7 @@ impl CPU {
                 return self.beq();
             }
             InstructionType::BIT => {
-                return false;
+                return self.bit(bus);
             }
             InstructionType::BMI => {
                 return self.bmi();
@@ -541,6 +541,22 @@ impl CPU {
     }
     fn beq(&mut self) -> bool {
         return self.branch_if(self.check_flag(StatusFlags::Z));
+    }
+
+    fn bit(&mut self, bus: &Vec<u8>) -> bool {
+        let res = self.a & bus[self.address];
+
+        if res == 0 {
+            self.set_flag(StatusFlags::Z);
+        } else {
+            if res & 0x80 == 0x80 {
+                self.set_flag(StatusFlags::N);
+            }
+            if res & 0x40 == 0x40 {
+                self.set_flag(StatusFlags::V);
+            }
+        }
+        return false;
     }
 
     fn bmi(&mut self) -> bool {
