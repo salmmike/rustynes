@@ -11,13 +11,13 @@ fn main() {
                        0x18, 0x6D, 0x01, 0x00, 0x88, 0xD0, 0xFA, 0x8D,
                        0x02, 0x00, 0xEA, 0xEA, 0xEA);
 
-    nes.cpu.set_ram(&mut nes.bus, &program, 0x1000);
-    nes.cpu.set_pc(0x1000);
+    nes.cpu.set_ram(&mut nes.bus, &program, 0x500);
+    nes.cpu.set_pc(0x500);
 
     loop {
         nes.cpu.tick(&mut nes.bus);
         nes.cpu.print_page(&nes.bus, 0);
-        nes.cpu.print_page(&nes.bus, 0x1000);
+        nes.cpu.print_page(&nes.bus, 0x500);
         nes.cpu.print_register();
         nes.cpu.print_status();
         while nes.cpu.cycles > 0 {
