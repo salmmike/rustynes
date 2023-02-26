@@ -103,14 +103,14 @@ impl CPU {
     fn print_mem(&self, bus: &Bus, start: usize) {
         print!("${:#04x}:", start);
         for i in 0..16 as usize {
-            print!("  {:#04x}", bus.read_ram(start + i));
+            print!("  {:#04x}", bus.read(start + i));
         }
     }
 
     pub fn print_instructions(&self, bus: &Bus) {
         println!("Instructions:");
         for i in 0..10 {
-            let instruction = Instruction::new(bus.read_ram(self.pc - 5 + i));
+            let instruction = Instruction::new(bus.read(self.pc - 5 + i));
             if i == 5 {
                 print!("** ");
             }
@@ -121,7 +121,7 @@ impl CPU {
 
     pub fn set_ram(&mut self, bus: &mut Bus, values: &Vec<u8>, start: usize) {
         for i in 0..values.len() {
-            bus.write_ram(start + i, values[i]);
+            bus.write(start + i, values[i]);
         }
     }
 
@@ -139,7 +139,7 @@ impl CPU {
 
     /// Fetch memory pointed by program counter
     fn fetch_instruction(&mut self, bus: &Bus) -> Instruction {
-        let ret = Instruction::new(bus.read_ram(self.pc));
+        let ret = Instruction::new(bus.read(self.pc));
         self.pc += 1;
         ret
     }
@@ -409,7 +409,7 @@ impl CPU {
                 return self.a;
             }
             _ => {
-                return bus.read_ram(self.address);
+                return bus.read(self.address);
             }
         }
     }
@@ -420,7 +420,7 @@ impl CPU {
                 self.a = value;
             }
             _ => {
-                bus.write_ram(self.address, value);
+                bus.write(self.address, value);
             }
         }
     }
@@ -433,25 +433,25 @@ impl CPU {
     }
 
     fn zero_page(&mut self, bus: &Bus) -> bool {
-        self.address = bus.read_ram(self.pc) as usize;
+        self.address = bus.read(self.pc) as usize;
         self.pc += 1;
         return false;
     }
 
     fn zero_page_x(&mut self, bus: &Bus) -> bool {
-        self.address = ((bus.read_ram(self.pc) + self.x) & 0xFF) as usize;
+        self.address = ((bus.read(self.pc) + self.x) & 0xFF) as usize;
         self.pc += 1;
         return false;
     }
 
     fn zero_page_y(&mut self, bus: &Bus) -> bool {
-        self.address = (bus.read_ram(self.pc) as usize + self.y as usize) & 0xFF;
+        self.address = (bus.read(self.pc) as usize + self.y as usize) & 0xFF;
         self.pc += 1;
         return false;
     }
 
     fn absolute(&mut self, bus: &Bus) -> bool {
-        self.address = bus.read_ram(self.pc) as usize | ((bus.read_ram(self.pc + 1) as usize) << 8);
+        self.address = bus.read(self.pc) as usize | ((bus.read(self.pc + 1) as usize) << 8);
         self.pc += 2;
         return false;
     }
@@ -477,27 +477,27 @@ impl CPU {
     }
 
     fn indirect(&mut self, bus: &Bus) -> bool {
-        let address = bus.read_ram(self.pc) as usize | ((bus.read_ram(self.pc + 1) as usize) << 8);
+        let address = bus.read(self.pc) as usize | ((bus.read(self.pc + 1) as usize) << 8);
         let mut inc: usize = 1;
         if address & 0xFF == 0xFF {
             inc = 0;
         }
-        self.address = bus.read_ram(address) as usize | ((bus.read_ram(address + inc) as usize) << 8);
+        self.address = bus.read(address) as usize | ((bus.read(address + inc) as usize) << 8);
         self.pc += 2;
         return false;
     }
 
     fn indirect_x(&mut self, bus: &Bus) -> bool {
-        let base = bus.read_ram(self.pc) as usize;
+        let base = bus.read(self.pc) as usize;
         let base_x = base + self.x as usize;
-        self.address = bus.read_ram(base_x) as usize | (bus.read_ram(base_x + 1) as usize) << 8;
+        self.address = bus.read(base_x) as usize | (bus.read(base_x + 1) as usize) << 8;
 
         return false;
     }
 
     fn indirect_y(&mut self, bus: &Bus) -> bool {
-        let base = bus.read_ram(self.pc) as usize;
-        self.address = bus.read_ram(base) as usize | (bus.read_ram(base + 1) as usize) << 8;
+        let base = bus.read(self.pc) as usize;
+        self.address = bus.read(base) as usize | (bus.read(base + 1) as usize) << 8;
         let prev = self.address;
         self.address += self.y as usize;
 
@@ -509,7 +509,7 @@ impl CPU {
     }
 
     fn relative(&mut self, bus: &Bus) -> bool {
-        self.branch_address = bus.read_ram(self.pc) as usize;
+        self.branch_address = bus.read(self.pc) as usize;
         println!("Branch address: {:#04x}", self.branch_address);
         self.pc += 1;
         if (self.branch_address & 0x80) == 0x80 {
@@ -526,21 +526,21 @@ impl CPU {
     }
 
     pub fn nmi(&mut self, bus: &mut Bus) {
-        bus.write_ram(self.sp, ((self.pc & 0xFF00) >> 8) as u8);
-        bus.write_ram(self.sp - 1, (self.pc & 0xFF) as u8);
+        bus.write(self.sp, ((self.pc & 0xFF00) >> 8) as u8);
+        bus.write(self.sp - 1, (self.pc & 0xFF) as u8);
         self.sp -= 2;
         self.clear_flag(StatusFlags::B);
         self.set_flag(StatusFlags::I);
 
         self.address = 0xFFEE;
-        self.pc = bus.read_ram(self.address) as usize |
-                    (((bus.read_ram(self.address + 1)) as usize) << 8);
+        self.pc = bus.read(self.address) as usize |
+                    (((bus.read(self.address + 1)) as usize) << 8);
         self.cycles = 8;
     }
 
     /* Instruction implementations */
     fn adc(&mut self, bus: &mut Bus) -> bool {
-        let mut val = bus.read_ram(self.address);
+        let mut val = bus.read(self.address);
         if self.check_flag(StatusFlags::C) {
             val += 1;
         }
@@ -560,7 +560,7 @@ impl CPU {
     }
 
     fn sbc(&mut self, bus: &Bus) -> bool {
-        let mut val = bus.read_ram(self.address);
+        let mut val = bus.read(self.address);
 
         if !self.check_flag(StatusFlags::C) {
             val += 1;
@@ -585,7 +585,7 @@ impl CPU {
     }
 
     fn and(&mut self, bus: &mut Bus) -> bool {
-        self.a &= bus.read_ram(self.address);
+        self.a &= bus.read(self.address);
         self.set_accumulator_flags();
 
         return true;
@@ -632,7 +632,7 @@ impl CPU {
     }
 
     fn bit(&mut self, bus: &Bus) -> bool {
-        let res = self.a & bus.read_ram(self.address);
+        let res = self.a & bus.read(self.address);
 
         self.set_value_flags(res);
 
@@ -688,10 +688,10 @@ impl CPU {
         self.clear_flag(StatusFlags::Z);
         self.clear_flag(StatusFlags::N);
 
-        if value >= bus.read_ram(self.address) {
+        if value >= bus.read(self.address) {
             self.set_flag(StatusFlags::C);
         }
-        if value == bus.read_ram(self.address) {
+        if value == bus.read(self.address) {
             self.set_flag(StatusFlags::Z);
         }
         if value & 0x80 == 0x80 {
@@ -715,8 +715,8 @@ impl CPU {
     }
 
     fn dec(&mut self, bus: &mut Bus) -> bool {
-        let res = self.overflow_subtract(bus.read_ram(self.address), 1);
-        bus.write_ram(self.address, res.1);
+        let res = self.overflow_subtract(bus.read(self.address), 1);
+        bus.write(self.address, res.1);
         self.set_value_flags(res.1);
 
         return false;
@@ -738,13 +738,13 @@ impl CPU {
     }
 
     fn eor(&mut self, bus: &Bus) -> bool {
-        self.a ^= bus.read_ram(self.address);
+        self.a ^= bus.read(self.address);
         self.set_accumulator_flags();
         return true;
     }
 
     fn inc(&mut self, bus: &mut Bus) -> bool {
-        let res = self.overflow_add(bus.read_ram(self.address), 1);
+        let res = self.overflow_add(bus.read(self.address), 1);
         if res.1 == 0 {
             self.set_flag(StatusFlags::Z);
         } else if res.1 & 0x80 == 0x80 {
@@ -775,8 +775,8 @@ impl CPU {
 
     fn jsr(&mut self, bus: &mut Bus) -> bool {
         self.pc += 1;
-        bus.write_ram(self.sp, (((self.pc) & 0xFF00) >> 8) as u8);
-        bus.write_ram(self.sp - 1, ((self.pc) & 0xFF) as u8);
+        bus.write(self.sp, (((self.pc) & 0xFF00) >> 8) as u8);
+        bus.write(self.sp - 1, ((self.pc) & 0xFF) as u8);
         self.sp -= 2;
 
         self.pc = self.address;
@@ -784,13 +784,13 @@ impl CPU {
     }
 
     fn lda(&mut self, bus: &Bus) -> bool {
-        self.a = bus.read_ram(self.address);
+        self.a = bus.read(self.address);
         self.set_accumulator_flags();
         return true;
     }
 
     fn ldx(&mut self, bus: &Bus) -> bool {
-        self.x = bus.read_ram(self.address);
+        self.x = bus.read(self.address);
         if self.x == 0 {
             self.set_flag(StatusFlags::Z)
         } else if self.x & 0x80 == 0x80 {
@@ -800,7 +800,7 @@ impl CPU {
     }
 
     fn ldy(&mut self, bus: &Bus) -> bool {
-        self.y = bus.read_ram(self.address);
+        self.y = bus.read(self.address);
         self.set_value_flags(self.y);
         return true;
     }
@@ -826,7 +826,7 @@ impl CPU {
     }
 
     fn ora(&mut self, bus: &Bus) -> bool {
-        let val = bus.read_ram(self.address);
+        let val = bus.read(self.address);
 
         self.a |= val;
         self.set_accumulator_flags();
@@ -835,27 +835,27 @@ impl CPU {
     }
 
     fn pha(&mut self, bus: &mut Bus) -> bool {
-        bus.write_ram(self.sp, self.a);
+        bus.write(self.sp, self.a);
         self.sp -= 1;
         return false;
     }
 
     fn php(&mut self, bus: &mut Bus) -> bool {
         self.set_flag(StatusFlags::B);
-        bus.write_ram(self.sp, self.status);
+        bus.write(self.sp, self.status);
         self.sp -= 1;
         return false;
     }
 
     fn pla(&mut self, bus: &mut Bus) -> bool {
-        self.a = bus.read_ram(self.sp);
+        self.a = bus.read(self.sp);
         self.sp += 1;
         self.set_accumulator_flags();
         return false;
     }
 
     fn plp(&mut self, bus: &Bus) -> bool {
-        self.status = bus.read_ram(self.sp);
+        self.status = bus.read(self.sp);
         self.sp += 1;
         return false;
     }
@@ -911,14 +911,14 @@ impl CPU {
     }
 
     fn rti(&mut self, bus: &Bus) -> bool {
-        self.status = bus.read_ram(self.sp);
-        self.pc = (bus.read_ram(self.sp + 1) as usize) << 8 | bus.read_ram(self.sp + 2) as usize;
+        self.status = bus.read(self.sp);
+        self.pc = (bus.read(self.sp + 1) as usize) << 8 | bus.read(self.sp + 2) as usize;
         self.sp += 3;
         return false;
     }
 
     fn rts(&mut self, bus: &Bus) -> bool {
-        self.pc = (bus.read_ram(self.sp) as usize) << 8 | bus.read_ram(self.sp + 1) as usize;
+        self.pc = (bus.read(self.sp) as usize) << 8 | bus.read(self.sp + 1) as usize;
         self.sp += 2;
         return false;
     }
@@ -939,17 +939,17 @@ impl CPU {
     }
 
     fn sta(&mut self, bus: &mut Bus) -> bool {
-        bus.write_ram(self.address, self.a);
+        bus.write(self.address, self.a);
         return false;
     }
 
     fn stx(&mut self, bus: &mut Bus) -> bool {
-        bus.write_ram(self.address, self.x);
+        bus.write(self.address, self.x);
         return false;
     }
 
     fn sty(&mut self, bus: &mut Bus) -> bool {
-        bus.write_ram(self.address, self.y);
+        bus.write(self.address, self.y);
         return false;
     }
 
