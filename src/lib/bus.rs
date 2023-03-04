@@ -27,13 +27,13 @@ impl Bus {
         if i <= 0x1FFF {
             return self.ram[i & 0x7FF];
         } else if i <= 0x3FFF {
-            return  self.ppu_mem[i & 0x8];
+            return  self.ppu_mem[i & 0x7];
         } else if i <= 0x4017 {
             return self.apu_io[i & 0x18];
         } else if i <= 0x401F {
-            return self.apu_io_test[i & 0x8];
+            return self.apu_io_test[i & 0x7];
         } else {
-            return self.cartridge.read(i & 0xBFED);
+            return self.cartridge.read(i & 0x7FFF);
         }
     }
 
@@ -47,7 +47,7 @@ impl Bus {
         } else if i <= 0x401F {
             self.apu_io_test[i & 0x8] = value;
         } else {
-            self.cartridge.write(i & 0xBFED, value);
+            self.cartridge.write(i & 0x7FFF, value);
         }
     }
 }
