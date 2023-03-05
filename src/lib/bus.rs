@@ -29,7 +29,7 @@ impl Bus {
         } else if i <= 0x3FFF {
             return  self.ppu_mem[i & 0x7];
         } else if i <= 0x4017 {
-            return self.apu_io[i & 0x18];
+            return self.apu_io[i % 0x17];
         } else if i <= 0x401F {
             return self.apu_io_test[i & 0x7];
         } else {
