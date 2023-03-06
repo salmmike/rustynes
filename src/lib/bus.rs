@@ -2,7 +2,7 @@ use crate::Cartridge;
 
 pub struct Bus {
     /// CPU ram
-    pub ram: Vec<u8>,
+    pub ram: [u8; 0x800],
     /// PPU registers
     pub ppu_mem: Vec<u8>,
     /// APU and I/O registers
@@ -15,7 +15,7 @@ pub struct Bus {
 impl Bus {
     pub fn new() -> Bus {
         Bus {
-            ram: vec!(0; 0x800),
+            ram: [0; 0x800],
             ppu_mem: vec!(0; 8),
             apu_io: vec!(0; 0x18),
             apu_io_test: vec!(0; 8),
@@ -33,7 +33,7 @@ impl Bus {
         } else if i <= 0x401F {
             return self.apu_io_test[i & 0x7];
         } else {
-            return self.cartridge.read(i & 0x7FFF);
+            return self.cartridge.read(i & 0x3FFF);
         }
     }
 
@@ -47,7 +47,7 @@ impl Bus {
         } else if i <= 0x401F {
             self.apu_io_test[i & 0x8] = value;
         } else {
-            self.cartridge.write(i & 0x7FFF, value);
+            self.cartridge.write(i & 0x3FFF, value);
         }
     }
 }

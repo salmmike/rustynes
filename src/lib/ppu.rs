@@ -11,22 +11,42 @@ use piston_window::{RenderArgs, clear, Context};
 
 use crate::Bus;
 
+const CONTROLLER: usize = 0x2000;
+const MASK: usize = 0x2001;
+const STATUS: usize = 0x2002;
+const OAM_ADDRESS: usize = 0x2003;
+const OAM_DATA: usize = 0x2004;
+const SCROLL: usize = 0x2005;
+const ADDRESS: usize = 0x2006;
+const DATA: usize = 0x2007;
+const OAM_DMA: usize = 0x4014;
+
 pub struct PPU {
-    v: u16,
-    t: u16,
-    x: u8,
-    w: bool,
 }
 
 impl PPU {
     pub fn new() -> PPU {
         PPU {
-            /// PPU address
-            v: 0,
-            t: 0,
-            x: 0,
-            w: false,
         }
+    }
+
+    pub fn controller(&self, bus: &Bus) -> u8 {
+        bus.read(CONTROLLER)
+    }
+    pub fn mask(&self, bus: &Bus) -> u8 {
+        bus.read(MASK)
+    }
+    pub fn scroll(&self, bus: &Bus) -> u8 {
+        bus.read(SCROLL)
+    }
+    pub fn status(&self, bus: &Bus) -> u8 {
+        bus.read(STATUS)
+    }
+    pub fn oam_address(&self, bus: &Bus) -> u8 {
+        bus.read(OAM_ADDRESS)
+    }
+    pub fn oam_data(&self, bus: &Bus) -> u8 {
+        bus.read(OAM_DATA)
     }
 
     pub fn tick(&mut self, bus: &mut Bus) {
